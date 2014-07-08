@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"syscall"
 )
 
@@ -52,7 +52,7 @@ type Context struct {
 	Umask int
 
 	// Struct contains only serializable public fields (!!!)
-	abspath  string
+	lookPath string
 	pidFile  *LockFile
 	logFile  *os.File
 	nullFile *os.File
@@ -115,7 +115,7 @@ func (d *Context) parent() (child *os.Process, err error) {
 		},
 	}
 
-	if child, err = os.StartProcess(d.abspath, d.Args, attr); err != nil {
+	if child, err = os.StartProcess(d.lookPath, d.Args, attr); err != nil {
 		if d.pidFile != nil {
 			d.pidFile.Remove()
 		}
@@ -180,7 +180,7 @@ func (d *Context) closeFiles() (err error) {
 }
 
 func (d *Context) prepareEnv() (err error) {
-	if d.abspath, err = filepath.Abs(os.Args[0]); err != nil {
+	if d.lookPath, err = exec.LookPath(os.Args[0]); err != nil {
 		return
 	}
 

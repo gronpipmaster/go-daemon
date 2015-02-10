@@ -109,9 +109,7 @@ func (d *Context) parent() (child *os.Process, err error) {
 		Env:   d.Env,
 		Files: d.files(),
 		Sys: &syscall.SysProcAttr{
-			//Chroot:     d.Chroot,
-			Credential: d.Credential,
-			Setsid:     true,
+			Setsid: true,
 		},
 	}
 
@@ -173,6 +171,7 @@ func (d *Context) closeFiles() (err error) {
 	cl(&d.logFile)
 	cl(&d.nullFile)
 	if d.pidFile != nil {
+		d.pidFile.Unlock()
 		d.pidFile.Close()
 		d.pidFile = nil
 	}
@@ -248,6 +247,18 @@ func (d *Context) child() (err error) {
 	}
 	if len(d.Chroot) > 0 {
 		err = syscall.Chroot(d.Chroot)
+	}
+	if d.Credential != nil {
+		if d.Credential.Gid > 0 {
+			if err = syscall.Setgid(int(d.Credential.Gid)); err != nil {
+				return
+			}
+		}
+		if d.Credential.Uid > 0 {
+			if err = syscall.Setuid(int(d.Credential.Uid)); err != nil {
+				return
+			}
+		}
 	}
 
 	return
